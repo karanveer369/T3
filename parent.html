@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Customer - GPS Live Tracking</title>
   
-  <script src="https://tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script> tailwind.config = { darkMode: 'class' } </script>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -30,7 +30,7 @@
           <h1 class="font-bold text-base text-white flex items-center gap-1.5">
             RideTracker <span class="text-[10px] uppercase px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300">Customer</span>
           </h1>
-          <p class="text-xs text-slate-400">Live Vehicle Tracker</p>
+          <p class="text-xs text-slate-400" id="headerSubtitle">Live Vehicle Tracker</p>
         </div>
       </div>
     </header>
@@ -54,15 +54,15 @@
 
       <!-- Dashboard -->
       <section id="customerView" class="hidden flex-1 flex flex-col relative h-full overflow-hidden">
-        <div class="flex-1 relative w-full h-full">
-          <div id="customerMap" class="w-full h-full absolute inset-0"></div>
+        <div class="flex-1 relative w-full">
+          <div id="customerMap" class="w-full h-full"></div>
           
           <div id="customerWaitingOverlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-[1000] flex flex-col items-center justify-center text-center">
             <div class="w-14 h-14 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-2xl mb-3 animate-pulse">
               <i class="fa-solid fa-tower-broadcast"></i>
             </div>
             <h3 class="text-lg font-bold text-white">Listening for Driver...</h3>
-            <p class="text-xs text-slate-400 mt-1">Make sure Driver has started broadcasting.</p>
+            <p class="text-xs text-slate-400 mt-1">Waiting for driver to broadcast GPS.</p>
           </div>
 
           <div class="absolute top-3 left-3 z-[1000] glass-panel px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 text-white">
@@ -71,19 +71,16 @@
           </div>
         </div>
 
-        <div class="bg-slate-900 border-t border-slate-800 p-4 shadow-2xl space-y-3 z-20">
+        <div class="bg-slate-900 border-t border-slate-800 p-4 shadow-2xl space-y-4">
           <div class="flex justify-between items-center">
              <div class="flex items-center gap-3">
-               <div class="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-base"><i class="fa-solid fa-taxi"></i></div>
-               <div><h3 class="font-bold text-white text-sm">Vehicle Live Status</h3><p id="customerLastSeenText" class="text-[11px] text-slate-400">Waiting for updates...</p></div>
+               <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white text-lg"><i class="fa-solid fa-taxi"></i></div>
+               <div><h3 class="font-bold text-white">Vehicle Tracking</h3><p id="customerLastSeenText" class="text-xs text-slate-400">Waiting...</p></div>
              </div>
           </div>
-
-          <!-- Coordinates & Speed Grid -->
-          <div class="grid grid-cols-3 gap-2 text-center">
-            <div class="p-2 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[9px] text-slate-400 font-bold block">Lat</span><p id="customerLatDisplay" class="text-xs font-mono text-white mt-0.5">--</p></div>
-            <div class="p-2 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[9px] text-slate-400 font-bold block">Lng</span><p id="customerLngDisplay" class="text-xs font-mono text-white mt-0.5">--</p></div>
-            <div class="p-2 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[9px] text-slate-400 font-bold block">Speed</span><p id="customerSpeedDisplay" class="text-xs font-mono text-emerald-400 mt-0.5">0 km/h</p></div>
+          <div class="grid grid-cols-2 gap-2 text-center">
+            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold">Speed</span><p id="customerSpeedDisplay" class="text-sm font-bold text-emerald-400 mt-0.5">0 km/h</p></div>
+            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold">Status</span><p id="customerStateBadge" class="text-sm font-bold text-indigo-300 mt-0.5">Stationary</p></div>
           </div>
         </div>
       </section>
@@ -110,7 +107,7 @@
 
     const createCarIcon = (heading = 0) => L.divIcon({
       className: '',
-      html: `<div class="car-marker-container" style="transform: rotate(${heading}deg);"><div class="w-10 h-10 flex items-center justify-center bg-slate-900 text-sky-400 rounded-full border-2 border-sky-400 shadow-xl"><i class="fa-solid fa-car-side"></i></div></div>`,
+      html: `<div class="car-marker-container" style="transform: rotate(${heading}deg);"><div class="relative w-10 h-10 flex items-center justify-center bg-slate-900 text-sky-400 rounded-full border-2 border-sky-400 shadow-xl"><i class="fa-solid fa-car-side"></i></div></div>`,
       iconSize: [40, 40], iconAnchor: [20, 20]
     });
 
@@ -118,21 +115,17 @@
       currentTripId = document.getElementById('sessionTripInput').value.trim() || 'trip_101';
       document.getElementById('setupView').classList.add('hidden');
       document.getElementById('customerView').classList.remove('hidden');
-      
       setTimeout(() => {
-        if (!customerMap) {
-          customerMap = L.map('customerMap', { zoomControl: false }).setView([26.9739, 81.9098], 17);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(customerMap);
-          customerRoutePolyline = L.polyline([], { color: '#0ea5e9', weight: 5 }).addTo(customerMap);
-          
-          startSmoothLoop();
-          listenToDriverStream();
-        } else {
-          customerMap.invalidateSize();
-        }
-      }, 200);
+        customerMap = L.map('customerMap', { zoomControl: false }).setView([26.9739, 81.9098], 17);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(customerMap);
+        customerRoutePolyline = L.polyline([], { color: '#0ea5e9', weight: 5 }).addTo(customerMap);
+        
+        startSmoothLoop();
+        listenToDriverStream();
+      }, 100);
     };
 
+    // 🚀 60 FPS SMOOTH GLIDE LERP ENGINE (Makhan ki tarah chalne ke liye)
     function startSmoothLoop() {
       if (targetLat !== 0 && targetLng !== 0) {
         if (displayedLat === 0) { displayedLat = targetLat; displayedLng = targetLng; }
@@ -154,16 +147,11 @@
         if (docSnap.exists()) {
           const data = docSnap.data();
           document.getElementById('customerWaitingOverlay').classList.add('hidden');
-          document.getElementById('customerConnDot').className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+          document.getElementById('customerConnDotclassName = "w-2.5 h-2.5 rounded-full bg-emerald-400";
           document.getElementById('customerConnStatus').textContent = "Connected";
 
           targetLat = data.latitude;
           targetLng = data.longitude;
-
-          document.getElementById('customerLatDisplay').textContent = Number(targetLat).toFixed(4);
-          document.getElementById('customerLngDisplay').textContent = Number(targetLng).toFixed(4);
-          document.getElementById('customerSpeedDisplay').textContent = `${data.speed || 0} km/h`;
-          document.getElementById('customerLastSeenText').textContent = "Live synced";
 
           const latlng = [targetLat, targetLng];
           if (!customerDriverMarker) {
@@ -176,6 +164,10 @@
 
           customerRoutePoints.push(latlng);
           customerRoutePolyline.setLatLngs(customerRoutePoints);
+
+          document.getElementById('customerSpeedDisplay').textContent = `${data.speed || 0} km/h`;
+          document.getElementById('customerStateBadge').textContent = (data.speed > 2) ? "Moving" : "Stationary";
+          document.getElementById('customerLastSeenText').textContent = "Live synced";
         }
       });
     }
