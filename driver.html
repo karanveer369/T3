@@ -6,9 +6,7 @@
   <title>Driver - GPS Live Tracking</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { darkMode: 'class' }
-  </script>
+  <script> tailwind.config = { darkMode: 'class' } </script>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -16,112 +14,70 @@
 
   <style>
     .leaflet-container { font-family: inherit; width: 100%; height: 100%; background: #090d16; }
-    .leaflet-bar a { background-color: rgba(30, 41, 59, 0.95) !important; color: #f8fafc !important; border-bottom: 1px solid #334155 !important; }
-    .dark .leaflet-tile { filter: brightness(0.85) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }
     .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.1); }
-    .car-marker-container { transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); transform-origin: center center; }
+    .car-marker-container { transition: transform 0.3s ease-out; transform-origin: center center; }
   </style>
 </head>
 <body class="h-full bg-slate-950 text-slate-100 font-sans antialiased overflow-hidden select-none">
 
-  <div id="app" class="h-full flex flex-col relative w-full overflow-hidden">
-    
+  <div class="h-full flex flex-col relative w-full overflow-hidden">
     <header class="z-30 bg-slate-900/95 border-b border-slate-800 px-4 py-3 flex items-center justify-between shadow-lg">
-      <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigateHome()">
+      <div class="flex items-center gap-2.5">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
           <i class="fa-solid fa-location-arrow text-base"></i>
         </div>
         <div>
-          <h1 class="font-bold text-base leading-tight tracking-tight text-white flex items-center gap-1.5">
-            RideTracker
-            <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Driver</span>
+          <h1 class="font-bold text-base text-white flex items-center gap-1.5">
+            RideTracker <span class="text-[10px] uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Driver</span>
           </h1>
-          <p class="text-xs text-slate-400 font-medium" id="headerSubtitle">GPS Broadcaster</p>
+          <p class="text-xs text-slate-400" id="headerSubtitle">GPS Broadcaster</p>
         </div>
       </div>
-      <button id="themeToggleBtn" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center transition border border-slate-700">
-        <i class="fa-regular fa-sun text-sm" id="themeIcon"></i>
-      </button>
     </header>
 
-    <div id="gpsAlertBanner" class="hidden z-40 bg-rose-950/90 border-b border-rose-800/80 px-4 py-3 text-rose-200 flex items-center justify-between shadow-lg">
-      <div class="flex items-center gap-3 pr-2">
-        <div class="w-8 h-8 rounded-lg bg-rose-900/60 border border-rose-700/60 flex items-center justify-center text-rose-400">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-        </div>
-        <div>
-          <h4 class="text-xs font-bold uppercase text-rose-300" id="gpsAlertTitle">GPS Error</h4>
-          <p class="text-xs text-rose-100 mt-0.5" id="gpsAlertMessage">Turn ON GPS and allow location.</p>
-        </div>
-      </div>
-      <button onclick="retryGpsAcquisition()" class="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-bold">Retry</button>
-    </div>
     <main class="flex-1 relative overflow-hidden flex flex-col">
       <!-- Setup Screen -->
       <section id="setupView" class="absolute inset-0 z-50 flex flex-col justify-center items-center p-4 bg-slate-950">
         <div class="glass-panel w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-5">
           <div class="text-center space-y-2">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Driver Setup
-            </div>
             <h2 class="text-2xl font-extrabold text-white">Broadcast GPS</h2>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Trip / Session ID</label>
-            <div class="relative">
-              <i class="fa-solid fa-route absolute inset-y-0 left-3.5 flex items-center text-slate-500"></i>
-              <input type="text" id="sessionTripInput" value="trip_101" class="w-full pl-10 pr-24 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-medium"/>
-              <button onclick="generateRandomTripId()" class="absolute inset-y-1.5 right-1.5 px-2.5 text-xs font-semibold bg-slate-800 text-emerald-300 rounded-lg flex items-center gap-1 border border-slate-700">
-                <i class="fa-solid fa-dice"></i> Random
-              </button>
-            </div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-2">Trip ID</label>
+            <input type="text" id="sessionTripInput" value="trip_101" class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"/>
           </div>
-          <button onclick="startApp()" class="w-full py-3.5 px-4 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg flex justify-center gap-2">
+          <button onclick="startApp()" class="w-full py-3.5 px-4 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg">
             Start Driver Mode
           </button>
         </div>
       </section>
 
-      <!-- Driver Dashboard -->
+      <!-- Dashboard -->
       <section id="driverView" class="hidden flex-1 flex flex-col relative h-full overflow-hidden">
-        <div class="flex-1 relative w-full min-h-[220px]">
+        <div class="flex-1 relative w-full">
           <div id="driverMap" class="w-full h-full"></div>
-          
           <div id="driverWaitingOverlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-[1000] flex flex-col items-center justify-center text-center">
             <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl mb-3 animate-pulse">
               <i class="fa-solid fa-satellite-dish"></i>
             </div>
-            <h3 class="text-lg font-bold text-white">Acquiring GPS Lock</h3>
-            <p class="text-xs text-slate-400 mt-1 max-w-xs">Connecting to hardware GPS. Please wait outdoors.</p>
+            <h3 class="text-lg font-bold text-white">Acquiring GPS Lock...</h3>
           </div>
-
-          <div class="absolute top-3 left-3 z-[1000] flex gap-2">
-            <div class="glass-panel px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 text-white">
-              <span id="driverStatusDot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
-              <span id="driverStatusText">GPS Paused</span>
-            </div>
-            <div class="glass-panel px-3 py-1.5 rounded-xl text-xs font-mono text-emerald-300 flex items-center gap-1.5">
-              <span id="driverTripDisplay">trip_101</span>
-            </div>
-          </div>
-          <button onclick="recenterDriverMap()" class="absolute top-3 right-3 z-[1000] glass-panel w-9 h-9 rounded-xl text-slate-200 flex justify-center items-center"><i class="fa-solid fa-crosshairs"></i></button>
         </div>
 
         <div class="bg-slate-900 border-t border-slate-800 p-4 shadow-2xl space-y-4">
-          <button id="trackingToggleBtn" onclick="toggleTracking()" class="w-full py-3.5 px-4 rounded-xl font-bold text-sm text-white bg-emerald-600 hover:bg-emerald-500 flex justify-center gap-2">
+          <button id="trackingToggleBtn" onclick="toggleTracking()" class="w-full py-3.5 px-4 rounded-xl font-bold text-sm text-white bg-emerald-600 flex justify-center gap-2">
             <i class="fa-solid fa-play" id="trackingBtnIcon"></i> <span id="trackingBtnText">Start Broadcasting</span>
           </button>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold block">Lat</span><p id="driverLatDisplay" class="text-sm font-mono text-white mt-0.5">--</p></div>
-            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold block">Lng</span><p id="driverLngDisplay" class="text-sm font-mono text-white mt-0.5">--</p></div>
-            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold block">Speed</span><p id="driverSpeedDisplay" class="text-sm font-mono text-emerald-400 mt-0.5">0 km/h</p></div>
-            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold block">Accuracy</span><p id="driverAccuracyDisplay" class="text-sm font-mono text-sky-400 mt-0.5">-- m</p></div>
+          <div class="grid grid-cols-3 gap-2.5 text-center">
+            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold">Speed</span><p id="driverSpeedDisplay" class="text-sm font-mono text-emerald-400 mt-0.5">0 km/h</p></div>
+            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold">Accuracy</span><p id="driverAccuracyDisplay" class="text-sm font-mono text-sky-400 mt-0.5">-- m</p></div>
+            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold">Status</span><p id="driverStatusText" class="text-sm font-mono text-amber-400 mt-0.5">Paused</p></div>
           </div>
         </div>
       </section>
     </main>
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
   </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -135,47 +91,23 @@
       appId: "1:533739162741:web:ca2cef802f5ba6588ebc3c"
     };
 
-    let app, db;
-    try { app = initializeApp(fbConf); db = getFirestore(app); } catch (e) { }
-
-    // TIMEOUT FIXED: Increased to 30000 (30s) to prevent Timeout Errors on mobile
-    const GPS_OPTIONS = { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 };
-    
+    let db = getFirestore(initializeApp(fbConf));
     let currentTripId = 'trip_101', isTracking = false, driverWatchId = null;
-    let driverMap = null, driverMarker = null, driverAccuracyCircle = null, driverRoutePolyline = null, driverRoutePoints = [];
+    let driverMap = null, driverMarker = null;
 
     const createCarIcon = (heading = 0) => L.divIcon({
-      className: 'custom-car-icon',
-      html: `<div class="car-marker-container" style="transform: rotate(${heading}deg);"><div class="relative w-10 h-10 flex items-center justify-center bg-slate-900 text-emerald-400 rounded-full border-2 border-emerald-400 shadow-xl shadow-emerald-500/50"><i class="fa-solid fa-car-side text-base"></i><div class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-slate-900 animate-ping"></div></div></div>`,
+      className: '',
+      html: `<div class="car-marker-container" style="transform: rotate(${heading}deg);"><div class="relative w-10 h-10 flex items-center justify-center bg-slate-900 text-emerald-400 rounded-full border-2 border-emerald-400 shadow-xl"><i class="fa-solid fa-car-side text-base"></i></div></div>`,
       iconSize: [40, 40], iconAnchor: [20, 20]
     });
-
-    function showToast(msg, type='info') {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl glass-panel text-white text-xs font-semibold shadow-2xl border border-slate-700`;
-      toast.innerHTML = `<i class="fa-solid fa-info-circle text-sky-400"></i><span>${msg}</span>`;
-      container.appendChild(toast);
-      setTimeout(() => toast.remove(), 3000);
-    }
-
-    function showGpsAlert(title, msg) { document.getElementById('gpsAlertTitle').textContent = title; document.getElementById('gpsAlertMessage').textContent = msg; document.getElementById('gpsAlertBanner').classList.remove('hidden'); }
-    function hideGpsAlert() { document.getElementById('gpsAlertBanner').classList.add('hidden'); }
-
-    window.generateRandomTripId = () => document.getElementById('sessionTripInput').value = `trip_${Math.floor(100+Math.random()*900)}`;
-    window.navigateHome = () => location.reload();
-    window.retryGpsAcquisition = () => { hideGpsAlert(); if(!isTracking) window.toggleTracking(); else { navigator.geolocation.clearWatch(driverWatchId); startDriverGpsWatch(); } }
 
     window.startApp = function() {
       currentTripId = document.getElementById('sessionTripInput').value.trim() || 'trip_101';
       document.getElementById('setupView').classList.add('hidden');
       document.getElementById('driverView').classList.remove('hidden');
-      document.getElementById('driverTripDisplay').textContent = currentTripId;
-      document.getElementById('headerSubtitle').textContent = `Driver • ${currentTripId}`;
       setTimeout(() => {
-        driverMap = L.map('driverMap', { zoomControl: false }).setView([0, 0], 2);
+        driverMap = L.map('driverMap', { zoomControl: false }).setView([26.9739, 81.9098], 17);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(driverMap);
-        driverRoutePolyline = L.polyline([], { color: '#10b981', weight: 5 }).addTo(driverMap);
         window.toggleTracking();
       }, 100);
     };
@@ -185,63 +117,55 @@
         navigator.geolocation.clearWatch(driverWatchId);
         isTracking = false;
         document.getElementById('trackingToggleBtn').className = "w-full py-3.5 px-4 rounded-xl font-bold text-sm text-white bg-emerald-600 flex justify-center gap-2";
-        document.getElementById('trackingBtnIcon').className = "fa-solid fa-play"; document.getElementById('trackingBtnText').textContent = "Start Broadcasting";
-        document.getElementById('driverStatusDot').className = "w-2.5 h-2.5 rounded-full bg-slate-500"; document.getElementById('driverStatusText').textContent = "GPS Paused";
+        document.getElementById('trackingBtnText').textContent = "Start Broadcasting";
+        document.getElementById('driverStatusText').textContent = "Paused";
       } else {
-        if (!navigator.geolocation) return showToast("GPS not supported", "error");
+        if (!navigator.geolocation) return alert("GPS not supported");
         isTracking = true;
         document.getElementById('trackingToggleBtn').className = "w-full py-3.5 px-4 rounded-xl font-bold text-sm text-white bg-rose-600 flex justify-center gap-2";
-        document.getElementById('trackingBtnIcon').className = "fa-solid fa-stop"; document.getElementById('trackingBtnText').textContent = "Stop Broadcasting";
-        document.getElementById('driverStatusDot').className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"; document.getElementById('driverStatusText').textContent = "Acquiring GPS...";
+        document.getElementById('trackingBtnText').textContent = "Stop Broadcasting";
+        document.getElementById('driverStatusText').textContent = "Broadcasting";
         startDriverGpsWatch();
       }
     };
 
     function startDriverGpsWatch() {
-      // QUICK LOCK FIX: First get low accuracy location so app doesn't hang
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          document.getElementById('driverWaitingOverlay').classList.add('hidden');
-          handleDriverRealGpsUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.speed, pos.coords.accuracy, pos.coords.heading);
-        }, () => {}, { enableHighAccuracy: false, timeout: 10000 }
-      );
-
-      // HIGH ACCURACY WATCH: Tracks exactly using hardware GPS
       driverWatchId = navigator.geolocation.watchPosition(
         (pos) => {
-          hideGpsAlert(); document.getElementById('driverWaitingOverlay').classList.add('hidden');
-          document.getElementById('driverStatusText').textContent = "Broadcasting";
-          handleDriverRealGpsUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.speed, pos.coords.accuracy, pos.coords.heading);
+          document.getElementById('driverWaitingOverlay').classList.add('hidden');
+          handleUpdate(pos.coords.latitude, pos.coords.longitude, pos.coords.speed, pos.coords.accuracy, pos.coords.heading);
         },
-        (error) => {
-          let errorMsg = "Unable to retrieve device location.";
-          if(error.code===1) errorMsg = "Permission denied. Allow GPS."; else if(error.code===3) errorMsg = "GPS Timeout. Go outdoors.";
-          showGpsAlert("GPS Failed", errorMsg);
-        }, GPS_OPTIONS
+        (err) => alert("GPS Error: " + err.message),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 }
       );
     }
 
-    async function handleDriverRealGpsUpdate(lat, lng, speed, accuracy, heading) {
-      const speedKmh = speed ? Math.round(speed * 3.6) : 0, accMeters = accuracy ? Math.round(accuracy) : 0, currentLatLng = [lat, lng];
-      document.getElementById('driverLatDisplay').textContent = Number(lat).toFixed(5); document.getElementById('driverLngDisplay').textContent = Number(lng).toFixed(5);
-      document.getElementById('driverSpeedDisplay').textContent = `${speedKmh} km/h`; document.getElementById('driverAccuracyDisplay').textContent = `±${accMeters} m`;
+    async function handleUpdate(lat, lng, speed, accuracy, heading) {
+      let speedKmh = speed ? Math.round(speed * 3.6) : 0;
+      
+      // 🚀 SMART DEAD-ZONE FILTER (GPS Drift rokne ke liye)
+      if (speedKmh < 3) speedKmh = 0;
+
+      const accMeters = accuracy ? Math.round(accuracy) : 0;
+      const currentLatLng = [lat, lng];
+
+      document.getElementById('driverSpeedDisplay').textContent = `${speedKmh} km/h`;
+      document.getElementById('driverAccuracyDisplay').textContent = `±${accMeters} m`;
 
       if (!driverMarker) {
-        driverMarker = L.marker(currentLatLng, { icon: createCarIcon(heading||0) }).addTo(driverMap);
-        driverAccuracyCircle = L.circle(currentLatLng, { radius: accMeters||5, color: '#10b981', fillOpacity: 0.15 }).addTo(driverMap);
+        driverMarker = L.marker(currentLatLng, { icon: createCarIcon(heading || 0) }).addTo(driverMap);
         driverMap.setView(currentLatLng, 17);
       } else {
-        driverMarker.setLatLng(currentLatLng); driverMarker.setIcon(createCarIcon(heading||0));
-        driverAccuracyCircle.setLatLng(currentLatLng).setRadius(accMeters||5);
+        driverMarker.setLatLng(currentLatLng);
+        driverMarker.setIcon(createCarIcon(heading || 0));
       }
-      driverRoutePoints.push(currentLatLng); driverRoutePolyline.setLatLngs(driverRoutePoints);
+      driverMap.panTo(currentLatLng, { animate: true });
 
-      if (db) await setDoc(doc(db, "trips", currentTripId), { latitude: lat, longitude: lng, speed: speedKmh, accuracy: accMeters, heading: heading||0, timestamp: Date.now(), updatedAt: serverTimestamp(), status: 'active' }, { merge: true });
+      // Push to Firebase
+      await setDoc(doc(db, "trips", currentTripId), {
+        latitude: lat, longitude: lng, speed: speedKmh, accuracy: accMeters, heading: heading || 0, timestamp: Date.now(), updatedAt: serverTimestamp()
+      }, { merge: true });
     }
-
-    window.recenterDriverMap = () => { if (driverMap && driverMarker) driverMap.setView(driverMarker.getLatLng(), 17); };
-    document.getElementById('themeToggleBtn').addEventListener('click', () => document.documentElement.classList.toggle('dark'));
-    document.documentElement.classList.add('dark');
   </script>
 </body>
 </html>
