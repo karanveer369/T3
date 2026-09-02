@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Driver - GPS Live Tracking</title>
   
-  <script src="https://tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <script> tailwind.config = { darkMode: 'class' } </script>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -30,7 +30,7 @@
           <h1 class="font-bold text-base text-white flex items-center gap-1.5">
             RideTracker <span class="text-[10px] uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Driver</span>
           </h1>
-          <p class="text-xs text-slate-400">GPS Broadcaster</p>
+          <p class="text-xs text-slate-400" id="headerSubtitle">GPS Broadcaster</p>
         </div>
       </div>
     </header>
@@ -54,8 +54,8 @@
 
       <!-- Dashboard -->
       <section id="driverView" class="hidden flex-1 flex flex-col relative h-full overflow-hidden">
-        <div class="flex-1 relative w-full h-full">
-          <div id="driverMap" class="w-full h-full absolute inset-0"></div>
+        <div class="flex-1 relative w-full">
+          <div id="driverMap" class="w-full h-full"></div>
           <div id="driverWaitingOverlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-[1000] flex flex-col items-center justify-center text-center">
             <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl mb-3 animate-pulse">
               <i class="fa-solid fa-satellite-dish"></i>
@@ -64,15 +64,14 @@
           </div>
         </div>
 
-        <div class="bg-slate-900 border-t border-slate-800 p-4 shadow-2xl space-y-3 z-20">
+        <div class="bg-slate-900 border-t border-slate-800 p-4 shadow-2xl space-y-4">
           <button id="trackingToggleBtn" onclick="toggleTracking()" class="w-full py-3.5 px-4 rounded-xl font-bold text-sm text-white bg-emerald-600 flex justify-center gap-2">
             <i class="fa-solid fa-play" id="trackingBtnIcon"></i> <span id="trackingBtnText">Start Broadcasting</span>
           </button>
-          <div class="grid grid-cols-4 gap-2 text-center">
-            <div class="p-2 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[9px] text-slate-400 font-bold block">Lat</span><p id="driverLatDisplay" class="text-xs font-mono text-white mt-0.5">--</p></div>
-            <div class="p-2 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[9px] text-slate-400 font-bold block">Lng</span><p id="driverLngDisplay" class="text-xs font-mono text-white mt-0.5">--</p></div>
-            <div class="p-2 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[9px] text-slate-400 font-bold block">Speed</span><p id="driverSpeedDisplay" class="text-xs font-mono text-emerald-400 mt-0.5">0 km/h</p></div>
-            <div class="p-2 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[9px] text-slate-400 font-bold block">Status</span><p id="driverStatusText" class="text-xs font-mono text-amber-400 mt-0.5">Paused</p></div>
+          <div class="grid grid-cols-3 gap-2.5 text-center">
+            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold">Speed</span><p id="driverSpeedDisplay" class="text-sm font-mono text-emerald-400 mt-0.5">0 km/h</p></div>
+            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold">Accuracy</span><p id="driverAccuracyDisplay" class="text-sm font-mono text-sky-400 mt-0.5">-- m</p></div>
+            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800"><span class="text-[10px] text-slate-400 font-bold">Status</span><p id="driverStatusText" class="text-sm font-mono text-amber-400 mt-0.5">Paused</p></div>
           </div>
         </div>
       </section>
@@ -98,7 +97,7 @@
 
     const createCarIcon = (heading = 0) => L.divIcon({
       className: '',
-      html: `<div class="car-marker-container" style="transform: rotate(${heading}deg);"><div class="w-10 h-10 flex items-center justify-center bg-slate-900 text-emerald-400 rounded-full border-2 border-emerald-400 shadow-xl"><i class="fa-solid fa-car-side text-base"></i></div></div>`,
+      html: `<div class="car-marker-container" style="transform: rotate(${heading}deg);"><div class="relative w-10 h-10 flex items-center justify-center bg-slate-900 text-emerald-400 rounded-full border-2 border-emerald-400 shadow-xl"><i class="fa-solid fa-car-side text-base"></i></div></div>`,
       iconSize: [40, 40], iconAnchor: [20, 20]
     });
 
@@ -106,16 +105,11 @@
       currentTripId = document.getElementById('sessionTripInput').value.trim() || 'trip_101';
       document.getElementById('setupView').classList.add('hidden');
       document.getElementById('driverView').classList.remove('hidden');
-      
       setTimeout(() => {
-        if (!driverMap) {
-          driverMap = L.map('driverMap', { zoomControl: false }).setView([26.9739, 81.9098], 17);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(driverMap);
-          window.toggleTracking();
-        } else {
-          driverMap.invalidateSize();
-        }
-      }, 200);
+        driverMap = L.map('driverMap', { zoomControl: false }).setView([26.9739, 81.9098], 17);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(driverMap);
+        window.toggleTracking();
+      }, 100);
     };
 
     window.toggleTracking = function() {
@@ -149,15 +143,14 @@
     async function handleUpdate(lat, lng, speed, accuracy, heading) {
       let speedKmh = speed ? Math.round(speed * 3.6) : 0;
       
-      // 🚀 Dead-zone filter (stops indoor jitter)
+      // 🚀 SMART DEAD-ZONE FILTER (GPS Drift rokne ke liye)
       if (speedKmh < 3) speedKmh = 0;
 
       const accMeters = accuracy ? Math.round(accuracy) : 0;
       const currentLatLng = [lat, lng];
 
-      document.getElementById('driverLatDisplay').textContent = Number(lat).toFixed(4);
-      document.getElementById('driverLngDisplay').textContent = Number(lng).toFixed(4);
       document.getElementById('driverSpeedDisplay').textContent = `${speedKmh} km/h`;
+      document.getElementById('driverAccuracyDisplay').textContent = `±${accMeters} m`;
 
       if (!driverMarker) {
         driverMarker = L.marker(currentLatLng, { icon: createCarIcon(heading || 0) }).addTo(driverMap);
@@ -168,6 +161,7 @@
       }
       driverMap.panTo(currentLatLng, { animate: true });
 
+      // Push to Firebase
       await setDoc(doc(db, "trips", currentTripId), {
         latitude: lat, longitude: lng, speed: speedKmh, accuracy: accMeters, heading: heading || 0, timestamp: Date.now(), updatedAt: serverTimestamp()
       }, { merge: true });
