@@ -125,7 +125,6 @@
       }, 100);
     };
 
-    // 🚀 60 FPS SMOOTH GLIDE LERP ENGINE (Makhan ki tarah chalne ke liye)
     function startSmoothLoop() {
       if (targetLat !== 0 && targetLng !== 0) {
         if (displayedLat === 0) { displayedLat = targetLat; displayedLng = targetLng; }
@@ -147,7 +146,7 @@
         if (docSnap.exists()) {
           const data = docSnap.data();
           document.getElementById('customerWaitingOverlay').classList.add('hidden');
-          document.getElementById('customerConnDotclassName = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+          document.getElementById('customerConnDot').className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
           document.getElementById('customerConnStatus').textContent = "Connected";
 
           targetLat = data.latitude;
