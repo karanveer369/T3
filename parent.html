@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Customer - GPS Live Tracking</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <style>
+    .leaflet-container { font-family: inherit; width: 100%; height: 100%; background: #090d16; }
+    .leaflet-bar a { background-color: rgba(30, 41, 59, 0.95) !important; color: #f8fafc !important; border-bottom: 1px solid #334155 !important; }
+    .dark .leaflet-tile { filter: brightness(0.85) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7); }
+    .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .car-marker-container { transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); transform-origin: center center; }
+  </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 font-sans antialiased overflow-hidden select-none">
+
+  <div id="app" class="h-full flex flex-col relative w-full overflow-hidden">
+    
+    <header class="z-30 bg-slate-900/95 border-b border-slate-800 px-4 py-3 flex items-center justify-between shadow-lg">
+      <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigateHome()">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-600 to-sky-400 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+          <i class="fa-solid fa-map-location-dot text-base"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-base leading-tight tracking-tight text-white flex items-center gap-1.5">
+            RideTracker
+            <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">Customer</span>
+          </h1>
+          <p class="text-xs text-slate-400 font-medium" id="headerSubtitle">Live Vehicle Tracker</p>
+        </div>
+      </div>
+      <button id="themeToggleBtn" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center transition border border-slate-700">
+        <i class="fa-regular fa-sun text-sm" id="themeIcon"></i>
+      </button>
+    </header>
+    <main class="flex-1 relative overflow-hidden flex flex-col">
+      <!-- Setup Screen -->
+      <section id="setupView" class="absolute inset-0 z-50 flex flex-col justify-center items-center p-4 bg-slate-950">
+        <div class="glass-panel w-full max-w-md p-6 rounded-2xl shadow-2xl space-y-5">
+          <div class="text-center space-y-2">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-300 text-xs font-semibold">
+              <i class="fa-solid fa-bolt text-sky-400"></i> Customer Tracker
+            </div>
+            <h2 class="text-2xl font-extrabold text-white">Track Vehicle</h2>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Trip / Session ID to Track</label>
+            <div class="relative">
+              <i class="fa-solid fa-route absolute inset-y-0 left-3.5 flex items-center text-slate-500"></i>
+              <input type="text" id="sessionTripInput" value="trip_101" class="w-full px-10 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm font-medium"/>
+            </div>
+          </div>
+          <button onclick="startApp()" class="w-full py-3.5 px-4 rounded-xl font-bold text-sm text-white bg-sky-600 hover:bg-sky-500 shadow-lg flex justify-center gap-2">
+            Start Live Tracking
+          </button>
+        </div>
+      </section>
+
+      <!-- Tracker Dashboard -->
+      <section id="customerView" class="hidden flex-1 flex flex-col relative h-full overflow-hidden">
+        <div class="flex-1 relative w-full min-h-[220px]">
+          <div id="customerMap" class="w-full h-full"></div>
+
+          <div id="customerWaitingOverlay" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm z-[1000] flex flex-col items-center justify-center text-center">
+            <div class="w-14 h-14 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-2xl mb-3 animate-pulse">
+              <i class="fa-solid fa-tower-broadcast"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white">Listening for Driver</h3>
+            <p class="text-xs text-slate-400 mt-1 max-w-xs">Waiting for driver to start GPS broadcasting.</p>
+          </div>
+
+          <div class="absolute top-3 left-3 z-[1000] flex gap-2">
+            <div class="glass-panel px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 text-white">
+              <span id="customerConnDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+              <span id="customerConnStatus">Connecting...</span>
+            </div>
+            <div class="glass-panel px-3 py-1.5 rounded-xl text-xs font-mono text-sky-300"><span id="customerTripDisplay">trip_101</span></div>
+          </div>
+          <div class="absolute top-3 right-3 z-[1000] flex flex-col gap-1.5">
+            <button onclick="centerOnDriver()" class="glass-panel w-9 h-9 rounded-xl text-slate-200 flex justify-center items-center"><i class="fa-solid fa-crosshairs"></i></button>
+            <button onclick="fitCustomerBounds()" class="glass-panel w-9 h-9 rounded-xl text-slate-200 flex justify-center items-center"><i class="fa-solid fa-arrows-to-eye"></i></button>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border-t border-slate-800 p-4 shadow-2xl space-y-4">
+          <div class="flex justify-between items-center">
+             <div class="flex items-center gap-3">
+               <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white text-lg"><i class="fa-solid fa-taxi"></i></div>
+               <div><h3 class="font-bold text-white">Vehicle Tracking</h3><p id="customerLastSeenText" class="text-xs text-slate-400">Waiting...</p></div>
+             </div>
+             <div class="text-right"><span class="text-[10px] text-slate-400 font-bold uppercase">Distance</span><br><span id="customerDistanceDisplay" class="text-base font-extrabold text-sky-400">-- km</span></div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800 text-center"><span class="text-[10px] text-slate-400 font-bold">Speed</span><p id="customerSpeedDisplay" class="text-sm font-bold text-emerald-400 mt-0.5">-- km/h</p></div>
+            <div class="p-3 bg-slate-950/70 rounded-xl border border-slate-800 text-center"><span class="text-[10px] text-slate-400 font-bold">Status</span><p id="customerStateBadge" class="text-sm font-bold text-indigo-300 mt-0.5">Awaiting</p></div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
+  </div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const fbConf = {
+      apiKey: "AIzaSyC_bj_Jxhi0ZzS_w4kkSv8Rn2GPRPx5H6o",
+      authDomain: "adarsh-bal-vidya-mandir-d0bf9.firebaseapp.com",
+      projectId: "adarsh-bal-vidya-mandir-d0bf9",
+      storageBucket: "adarsh-bal-vidya-mandir-d0bf9.firebasestorage.app",
+      messagingSenderId: "533739162741",
+      appId: "1:533739162741:web:ca2cef802f5ba6588ebc3c"
+    };
+
+    let app, db;
+    try { app = initializeApp(fbConf); db = getFirestore(app); } catch (e) { }
+
+    let currentTripId = 'trip_101', customerMap = null, customerDriverMarker = null, customerSelfMarker = null, customerRoutePolyline = null;
+    let lastDriverPosition = null, customerSelfPosition = null, customerRoutePoints = [];
+
+    const createCarIcon = (heading = 0) => L.divIcon({ className: 'custom-car-icon', html: `<div class="car-marker-container" style="transform: rotate(${heading}deg);"><div class="relative w-10 h-10 flex items-center justify-center bg-slate-900 text-sky-400 rounded-full border-2 border-sky-400 shadow-xl shadow-sky-500/50"><i class="fa-solid fa-car-side"></i><div class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-sky-500 rounded-full border-2 border-slate-900 animate-ping"></div></div></div>`, iconSize: [40, 40], iconAnchor: [20, 20] });
+    const createCustomerUserIcon = () => L.divIcon({ className: 'custom-user-icon', html: `<div class="relative w-8 h-8 flex items-center justify-center bg-sky-600 text-white rounded-full border-2 border-white"><i class="fa-solid fa-user text-xs"></i></div>`, iconSize: [32, 32], iconAnchor: [16, 16] });
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371, dLat = (lat2-lat1)*(Math.PI/180), dLon = (lon2-lon1)*(Math.PI/180);
+      const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180))*Math.cos(lat2*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+
+    window.navigateHome = () => location.reload();
+    
+    window.startApp = function() {
+      currentTripId = document.getElementById('sessionTripInput').value.trim() || 'trip_101';
+      document.getElementById('setupView').classList.add('hidden');
+      document.getElementById('customerView').classList.remove('hidden');
+      document.getElementById('customerTripDisplay').textContent = currentTripId;
+      document.getElementById('headerSubtitle').textContent = `Tracking • ${currentTripId}`;
+      setTimeout(() => {
+        customerMap = L.map('customerMap', { zoomControl: false }).setView([0, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(customerMap);
+        customerRoutePolyline = L.polyline([], { color: '#0ea5e9', weight: 5 }).addTo(customerMap);
+        startCustomerSelfGpsWatch(); listenToDriverStream();
+      }, 100);
+    };
+
+    function startCustomerSelfGpsWatch() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.watchPosition((pos) => {
+        customerSelfPosition = [pos.coords.latitude, pos.coords.longitude];
+        if (customerMap) {
+          if (!customerSelfMarker) { customerSelfMarker = L.marker(customerSelfPosition, { icon: createCustomerUserIcon() }).addTo(customerMap); }
+          else customerSelfMarker.setLatLng(customerSelfPosition);
+        }
+        if(lastDriverPosition) updateDistance(lastDriverPosition);
+      }, () => {}, { enableHighAccuracy: true, timeout: 30000 });
+    }
+
+    function listenToDriverStream() {
+      onSnapshot(doc(db, "trips", currentTripId), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data(), latlng = [data.latitude, data.longitude];
+          document.getElementById('customerWaitingOverlay').classList.add('hidden');
+          document.getElementById('customerConnDot').className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+          document.getElementById('customerConnStatus').textContent = "Connected";
+          lastDriverPosition = latlng;
+
+          if (!customerDriverMarker) { customerDriverMarker = L.marker(latlng, { icon: createCarIcon(data.heading) }).addTo(customerMap); customerMap.setView(latlng, 16); } 
+          else { customerDriverMarker.setLatLng(latlng); customerDriverMarker.setIcon(createCarIcon(data.heading)); }
+
+          customerRoutePoints.push(latlng); customerRoutePolyline.setLatLngs(customerRoutePoints);
+          document.getElementById('customerSpeedDisplay').textContent = `${data.speed||0} km/h`;
+          document.getElementById('customerStateBadge').textContent = (data.speed > 3) ? "Moving" : "Stationary";
+          
+          let seconds = Math.floor((Date.now() - (data.timestamp||Date.now())) / 1000);
+          document.getElementById('customerLastSeenText').textContent = seconds < 4 ? "Just now" : `${seconds}s ago`;
+          updateDistance(latlng);
+        } else {
+          document.getElementById('customerWaitingOverlay').classList.remove('hidden');
+        }
+      });
+    }
+
+    function updateDistance(driverPos) {
+      if (customerSelfPosition && driverPos) {
+        const distKm = calculateDistance(customerSelfPosition[0], customerSelfPosition[1], driverPos[0], driverPos[1]);
+        document.getElementById('customerDistanceDisplay').textContent = distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`;
+      }
+    }
+
+    window.centerOnDriver = () => { if (customerMap && lastDriverPosition) customerMap.setView(lastDriverPosition, 16); };
+    window.fitCustomerBounds = () => { if (customerMap && lastDriverPosition && customerSelfPosition) customerMap.fitBounds(L.latLngBounds([lastDriverPosition, customerSelfPosition]), { padding: [60, 60] }); };
+    
+    document.getElementById('themeToggleBtn').addEventListener('click', () => document.documentElement.classList.toggle('dark'));
+    document.documentElement.classList.add('dark');
+  </script>
+</body>
+</html>
